@@ -5,6 +5,14 @@ set -eu
 input=${1:?需要输入目录}
 output=${2:?需要输出目录}
 
-# TODO：删除下方提示和 exit 77，再填写你的命令。
-printf '%s\n' 'Q1 尚未实现' >&2
-exit 77
+mkdir -p "$output"
+
+# 1) handover/ 的真实绝对路径：参数是唯一可靠入口（路径可能含空格、cwd 不保证在仓库里）
+cd "$input/handover"
+pwd >"$output/location.txt"
+
+# 2) 隐藏文件 .robot-id 的完整内容
+cat "$input/handover/.robot-id" >"$output/robot-id.txt"
+
+# 3) notes/welcome.txt 的完整内容
+cat "$input/notes/welcome.txt" >"$output/welcome.txt"
