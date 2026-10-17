@@ -7,6 +7,32 @@ output=${2:?需要输出目录}
 
 action=${3:-start}
 
-# TODO：删除下方提示和 exit 77，再填写你的命令。
-printf '%s\n' 'BONUS 尚未实现' >&2
-exit 77
+# shellcheck disable=SC1091
+. "$input/bonus.env"
+
+case "$action" in
+    start)
+        # 创建分离会话（-d），会话里只跑一个教师采集器实例；
+        # 脚本立即返回，采集器继续在后台写日志。
+        tmux -L "$TMUX_SOCKET" new-session -d -s "$SESSION" \
+            "python3 '$WORKER_TOOL' --token '$TOKEN' --log '$output/bonus.log'"
+        ;;
+    stop)
+        # 先让采集器收到 SIGINT 优雅退出（worker 会写出 STOP 行）
+        tmux -L "$TMUX_SOCKET" send-keys -t "$SESSION" C-c 2>/dev/null || true
+        i=0
+        while [ "$i" -lt 50 ]; do
+            if grep -q "STOP $TOKEN" "$output/bonus.log" 2>/dev/null; then
+                break
+            fi
+            sleep 0.1
+            i=$((i + 1))
+        done
+        # 再结束本题指定的会话，不影响其他会话
+        tmux -L "$TMUX_SOCKET" kill-session -t "$SESSION" 2>/dev/null || true
+        ;;
+    *)
+        printf 'unknown action: %s\n' "$action" >&2
+        exit 2
+        ;;
+esac
